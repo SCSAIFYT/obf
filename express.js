@@ -1,34 +1,12 @@
 require('dotenv').config();
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const fetch = require('node-fetch');
-
-const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
-const JavaScriptObfuscator = require('javascript-obfuscator');
-const terser = require('terser');
-const beautify = require('js-beautify').js;
-const minify_html = require('html-minifier').minify;
-const CleanCSS = require('clean-css');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const VALID_API_KEY = process.env.API_KEY;
 
-// Endpoint dasar
-app.get('/', (req, res) => {
-  res.send('📘 Gunakan endpoint /code dengan header x-api-key untuk melihat kode.');
-});
+const VALID_API_KEYS = process.env.API_KEY?.split(',') || [];
 
-// Endpoint untuk ambil isi obfuscator command jika API Key valid
-app.get('/code', async (req, res) => {
-  const key = req.headers['x-api-key'];
-  if (!key) return res.status(400).send('❌ API Key diperlukan di header (x-api-key)');
-  if (key !== VALID_API_KEY) return res.status(403).send('❌ API Key tidak valid');
-
-  console.log('✅ API Key valid digunakan');
-
-  const obfCode = `
+const obfCommand = `
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const JavaScriptObfuscator = require('javascript-obfuscator');
 const terser = require('terser');
@@ -127,9 +105,25 @@ module.exports = {
     }
   }
 };
-  `;
+`;
 
-  res.type('text/plain').send(obfCode);
+app.get('/', (req, res) => {
+  res.send('📘 Gunakan endpoint /code dengan header x-api-key untuk melihat kode command /obf.');
+});
+
+app.get('/code', (req, res) => {
+  const key = req.headers['x-api-key'];
+
+  if (!key) {
+    return res.status(400).send('❌ API Key dibutuhkan di header x-api-key');
+  }
+
+  if (!VALID_API_KEYS.includes(key)) {
+    return res.status(403).send('❌ API Key tidak valid');
+  }
+
+  console.log('✅ API Key valid digunakan:', key);
+  res.type('text/plain').send(obfCommand);
 });
 
 app.listen(PORT, () => {
